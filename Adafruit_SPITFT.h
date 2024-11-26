@@ -23,6 +23,7 @@
 // Not for ATtiny, at all
 #if !defined(__AVR_ATtiny85__) && !defined(__AVR_ATtiny84__)
 
+#include "Adafruit_TCA8418.h"
 #include "Adafruit_GFX.h"
 #include <SPI.h>
 
@@ -137,14 +138,14 @@ public:
   // than moving it to the optional arguments, it was done this way to
   // avoid breaking existing code (-1 option was a later addition).
   Adafruit_SPITFT(uint16_t w, uint16_t h, int8_t cs, int8_t dc,
-                  int8_t rst = -1);
+                  int8_t rst = -1, Adafruit_TCA8418 *_tio = new Adafruit_TCA8418());
 
 #if !defined(ESP8266) // See notes in .cpp
   // Hardware SPI constructor using an arbitrary SPI peripheral: expects
   // width & height (rotation 0), SPIClass pointer, 2 signal pins (cs, dc)
   // and optional reset pin. cs is required but can be -1 if unused.
   Adafruit_SPITFT(uint16_t w, uint16_t h, SPIClass *spiClass, int8_t cs,
-                  int8_t dc, int8_t rst = -1);
+                  int8_t dc, int8_t rst = -1, Adafruit_TCA8418 *_tio = new Adafruit_TCA8418());
 #endif // end !ESP8266
 
   // Parallel constructor: expects width & height (rotation 0), flag
@@ -301,7 +302,7 @@ public:
     *csPort |= csPinMaskSet;
 #endif // end !HAS_PORT_SET_CLR
 #else  // !USE_FAST_PINIO
-    digitalWrite(_cs, HIGH);
+    _tio->digitalWrite(_cs, HIGH);
 #endif // end !USE_FAST_PINIO
   }
 
@@ -323,7 +324,7 @@ public:
     *csPort &= csPinMaskClr;
 #endif // end !HAS_PORT_SET_CLR
 #else  // !USE_FAST_PINIO
-    digitalWrite(_cs, LOW);
+    _tio->digitalWrite(_cs, LOW);
 #endif // end !USE_FAST_PINIO
   }
 
@@ -342,7 +343,7 @@ public:
     *dcPort |= dcPinMaskSet;
 #endif // end !HAS_PORT_SET_CLR
 #else  // !USE_FAST_PINIO
-    digitalWrite(_dc, HIGH);
+    _tio->digitalWrite(_dc, HIGH);
 #endif // end !USE_FAST_PINIO
   }
 
@@ -361,7 +362,7 @@ public:
     *dcPort &= dcPinMaskClr;
 #endif // end !HAS_PORT_SET_CLR
 #else  // !USE_FAST_PINIO
-    digitalWrite(_dc, LOW);
+    _tio->digitalWrite(_dc, LOW);
 #endif // end !USE_FAST_PINIO
   }
 
@@ -525,6 +526,7 @@ protected:
   uint8_t invertOffCommand = 0; ///< Command to disable invert mode
 
   uint32_t _freq = 0; ///< Dummy var to keep subclasses happy
+  Adafruit_TCA8418* _tio;
 };
 
 #endif // end __AVR_ATtiny85__ __AVR_ATtiny84__

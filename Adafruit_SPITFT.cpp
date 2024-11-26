@@ -244,8 +244,8 @@ Adafruit_SPITFT::Adafruit_SPITFT(uint16_t w, uint16_t h, int8_t cs, int8_t dc,
 }
 #else  // !ESP8266
 Adafruit_SPITFT::Adafruit_SPITFT(uint16_t w, uint16_t h, int8_t cs, int8_t dc,
-                                 int8_t rst)
-    : Adafruit_SPITFT(w, h, &SPI, cs, dc, rst) {
+                                 int8_t rst, Adafruit_TCA8418 *tio)
+    : Adafruit_SPITFT(w, h, &SPI, cs, dc, rst, tio) {
   // This just invokes the hardware SPI constructor below,
   // passing the default SPI device (&SPI).
 }
@@ -280,10 +280,11 @@ Adafruit_SPITFT::Adafruit_SPITFT(uint16_t w, uint16_t h, int8_t cs, int8_t dc,
              begin or init function. Unfortunate but unavoidable.
 */
 Adafruit_SPITFT::Adafruit_SPITFT(uint16_t w, uint16_t h, SPIClass *spiClass,
-                                 int8_t cs, int8_t dc, int8_t rst)
+                                 int8_t cs, int8_t dc, int8_t rst, Adafruit_TCA8418 *tio)
     : Adafruit_GFX(w, h), connection(TFT_HARD_SPI), _rst(rst), _cs(cs),
       _dc(dc) {
   hwspi._spi = spiClass;
+  _tio = tio;
 #if defined(USE_FAST_PINIO)
 #if defined(HAS_PORT_SET_CLR)
 #if defined(CORE_TEENSY)
@@ -532,11 +533,11 @@ void Adafruit_SPITFT::initSPI(uint32_t freq, uint8_t spiMode) {
 
   // Init basic control pins common to all connection types
   if (_cs >= 0) {
-    pinMode(_cs, OUTPUT);
-    digitalWrite(_cs, HIGH); // Deselect
+    _tio->pinMode(_cs, OUTPUT);
+    _tio->digitalWrite(_cs, HIGH); // Deselect
   }
-  pinMode(_dc, OUTPUT);
-  digitalWrite(_dc, HIGH); // Data mode
+  _tio->pinMode(_dc, OUTPUT);
+  _tio->digitalWrite(_dc, HIGH); // Data mode
 
   if (connection == TFT_HARD_SPI) {
 
@@ -641,12 +642,12 @@ void Adafruit_SPITFT::initSPI(uint32_t freq, uint8_t spiMode) {
 
   if (_rst >= 0) {
     // Toggle _rst low to reset
-    pinMode(_rst, OUTPUT);
-    digitalWrite(_rst, HIGH);
+    _tio->pinMode(_rst, OUTPUT);
+    _tio->digitalWrite(_rst, HIGH);
     delay(100);
-    digitalWrite(_rst, LOW);
+    _tio->digitalWrite(_rst, LOW);
     delay(100);
-    digitalWrite(_rst, HIGH);
+    _tio->digitalWrite(_rst, HIGH);
     delay(200);
   }
 
@@ -913,7 +914,7 @@ void Adafruit_SPITFT::setSPISpeed(uint32_t freq) {
 void Adafruit_SPITFT::startWrite(void) {
   SPI_BEGIN_TRANSACTION();
   if (_cs >= 0)
-    SPI_CS_LOW();
+    _tio->digitalWrite(_cs, LOW);//SPI_CS_LOW();
 }
 
 /*!
@@ -924,7 +925,7 @@ void Adafruit_SPITFT::startWrite(void) {
 */
 void Adafruit_SPITFT::endWrite(void) {
   if (_cs >= 0)
-    SPI_CS_HIGH();
+    _tio->digitalWrite(_cs, HIGH);//SPI_CS_HIGH();
   SPI_END_TRANSACTION();
 }
 
@@ -1949,12 +1950,12 @@ void Adafruit_SPITFT::sendCommand(uint8_t commandByte, uint8_t *dataBytes,
                                   uint8_t numDataBytes) {
   SPI_BEGIN_TRANSACTION();
   if (_cs >= 0)
-    SPI_CS_LOW();
+    _tio->digitalWrite(_cs, LOW);//SPI_CS_LOW();
 
-  SPI_DC_LOW();          // Command mode
+  _tio->digitalWrite(_dc, LOW);//SPI_DC_LOW();          // Command mode
   spiWrite(commandByte); // Send the command byte
 
-  SPI_DC_HIGH();
+  _tio->digitalWrite(_dc, HIGH);//SPI_DC_HIGH();
   for (int i = 0; i < numDataBytes; i++) {
     if ((connection == TFT_PARALLEL) && tft8.wide) {
       SPI_WRITE16(*(uint16_t *)dataBytes);
@@ -1966,7 +1967,7 @@ void Adafruit_SPITFT::sendCommand(uint8_t commandByte, uint8_t *dataBytes,
   }
 
   if (_cs >= 0)
-    SPI_CS_HIGH();
+    _tio->digitalWrite(_cs, HIGH);//SPI_CS_HIGH();
   SPI_END_TRANSACTION();
 }
 
@@ -1981,12 +1982,12 @@ void Adafruit_SPITFT::sendCommand(uint8_t commandByte, const uint8_t *dataBytes,
                                   uint8_t numDataBytes) {
   SPI_BEGIN_TRANSACTION();
   if (_cs >= 0)
-    SPI_CS_LOW();
+    _tio->digitalWrite(_cs, LOW);//SPI_CS_LOW();
 
-  SPI_DC_LOW();          // Command mode
+  _tio->digitalWrite(_dc, LOW);//SPI_DC_LOW();          // Command mode
   spiWrite(commandByte); // Send the command byte
 
-  SPI_DC_HIGH();
+  _tio->digitalWrite(_dc, HIGH);//SPI_DC_HIGH();
   for (int i = 0; i < numDataBytes; i++) {
     if ((connection == TFT_PARALLEL) && tft8.wide) {
       SPI_WRITE16(*(uint16_t *)dataBytes);
@@ -1997,7 +1998,7 @@ void Adafruit_SPITFT::sendCommand(uint8_t commandByte, const uint8_t *dataBytes,
   }
 
   if (_cs >= 0)
-    SPI_CS_HIGH();
+    _tio->digitalWrite(_cs, HIGH);//SPI_CS_HIGH();
   SPI_END_TRANSACTION();
 }
 
@@ -2017,23 +2018,23 @@ void Adafruit_SPITFT::sendCommand16(uint16_t commandWord,
                                     uint8_t numDataBytes) {
   SPI_BEGIN_TRANSACTION();
   if (_cs >= 0)
-    SPI_CS_LOW();
+    _tio->digitalWrite(_cs, LOW);//SPI_CS_LOW();
 
   if (numDataBytes == 0) {
-    SPI_DC_LOW();             // Command mode
+    _tio->digitalWrite(_dc, LOW);//SPI_DC_LOW();             // Command mode
     SPI_WRITE16(commandWord); // Send the command word
-    SPI_DC_HIGH();            // Data mode
+    _tio->digitalWrite(_dc, HIGH);//SPI_DC_HIGH();            // Data mode
   }
   for (int i = 0; i < numDataBytes; i++) {
-    SPI_DC_LOW();             // Command mode
+    _tio->digitalWrite(_dc, LOW);//SPI_DC_LOW();             // Command mode
     SPI_WRITE16(commandWord); // Send the command word
-    SPI_DC_HIGH();            // Data mode
+    _tio->digitalWrite(_dc, HIGH);//SPI_DC_HIGH();            // Data mode
     commandWord++;
     SPI_WRITE16((uint16_t)pgm_read_byte(dataBytes++));
   }
 
   if (_cs >= 0)
-    SPI_CS_HIGH();
+    _tio->digitalWrite(_cs, HIGH);//SPI_CS_HIGH();
   SPI_END_TRANSACTION();
 }
 
@@ -2051,9 +2052,9 @@ void Adafruit_SPITFT::sendCommand16(uint16_t commandWord,
 uint8_t Adafruit_SPITFT::readcommand8(uint8_t commandByte, uint8_t index) {
   uint8_t result;
   startWrite();
-  SPI_DC_LOW(); // Command mode
+  _tio->digitalWrite(_dc, LOW);//SPI_DC_LOW(); // Command mode
   spiWrite(commandByte);
-  SPI_DC_HIGH(); // Data mode
+  _tio->digitalWrite(_dc, HIGH);//SPI_DC_HIGH(); // Data mode
   do {
     result = spiRead();
   } while (index--); // Discard bytes up to index'th
@@ -2072,9 +2073,9 @@ uint16_t Adafruit_SPITFT::readcommand16(uint16_t addr) {
   uint16_t result = 0;
   if ((connection == TFT_PARALLEL) && tft8.wide) {
     startWrite();
-    SPI_DC_LOW(); // Command mode
+    _tio->digitalWrite(_dc, LOW);//SPI_DC_LOW(); // Command mode
     SPI_WRITE16(addr);
-    SPI_DC_HIGH(); // Data mode
+    _tio->digitalWrite(_dc, HIGH);//SPI_DC_HIGH(); // Data mode
     TFT_RD_LOW();  // Read line LOW
 #if defined(HAS_PORT_SET_CLR)
     *(volatile uint16_t *)tft8.dirClr = 0xFFFF;   // Input state
@@ -2198,9 +2199,9 @@ void Adafruit_SPITFT::spiWrite(uint8_t b) {
     @param  cmd  8-bit command to write.
 */
 void Adafruit_SPITFT::writeCommand(uint8_t cmd) {
-  SPI_DC_LOW();
+  _tio->digitalWrite(_dc, LOW);//SPI_DC_LOW();
   spiWrite(cmd);
-  SPI_DC_HIGH();
+  _tio->digitalWrite(_dc, HIGH);//SPI_DC_HIGH();
 }
 
 /*!
@@ -2297,9 +2298,9 @@ void Adafruit_SPITFT::write16(uint16_t w) {
     @param  cmd  16-bit command to write.
 */
 void Adafruit_SPITFT::writeCommand16(uint16_t cmd) {
-  SPI_DC_LOW();
+  _tio->digitalWrite(_dc, LOW);//SPI_DC_LOW();
   write16(cmd);
-  SPI_DC_HIGH();
+  _tio->digitalWrite(_dc, HIGH);//SPI_DC_HIGH();
 }
 
 /*!
