@@ -130,7 +130,7 @@ public:
   // rather than moving it to the optional arguments, it was done this way
   // to avoid breaking existing code (-1 option was a later addition).
   Adafruit_SPITFT(uint16_t w, uint16_t h, int8_t cs, int8_t dc, int8_t mosi,
-                  int8_t sck, int8_t rst = -1, int8_t miso = -1);
+                  int8_t sck, int8_t rst = -1, int8_t miso = -1, Adafruit_TCA8418 *_tio = new Adafruit_TCA8418());
 
   // Hardware SPI constructor using the default SPI port: expects width &
   // height (at default rotation setting 0), 2 signal pins (cs, dc),

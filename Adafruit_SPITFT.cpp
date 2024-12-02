@@ -35,6 +35,7 @@
 #if !defined(__AVR_ATtiny85__) && !defined(__AVR_ATtiny84__)
 
 #include "Adafruit_SPITFT.h"
+#include <Adafruit_TCA8418.h>
 
 #if defined(__AVR__)
 #if defined(__AVR_XMEGA__) // only tested with __AVR_ATmega4809__
@@ -117,12 +118,13 @@ static const struct {
 */
 Adafruit_SPITFT::Adafruit_SPITFT(uint16_t w, uint16_t h, int8_t cs, int8_t dc,
                                  int8_t mosi, int8_t sck, int8_t rst,
-                                 int8_t miso)
+                                 int8_t miso, Adafruit_TCA8418 *tio)
     : Adafruit_GFX(w, h), connection(TFT_SOFT_SPI), _rst(rst), _cs(cs),
       _dc(dc) {
   swspi._sck = sck;
   swspi._mosi = mosi;
   swspi._miso = miso;
+  _tio = tio
 #if defined(USE_FAST_PINIO)
 #if defined(HAS_PORT_SET_CLR)
 #if defined(CORE_TEENSY)
